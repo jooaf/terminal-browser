@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Box, Image, Text } from "@zenbu-labs/pixel";
 import { displayUrl } from "../url";
 import { Icon } from "./icons";
+import { HintBox, HintClipBox, useChromeHints } from "./hints";
 import { usePulse } from "./pulse";
 import { mix, withAlpha } from "./theme";
 import type { Theme } from "./theme";
@@ -145,6 +146,7 @@ export function TabStrip({
   theme: Theme;
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const hinting = useChromeHints().active;
   const activeLabel = displayUrl(url);
   const pointerIn = useRef(false);
   const dotPulse = usePulse(tabs.some((tab) => tab.agentControlled && !tab.active));
@@ -202,7 +204,7 @@ export function TabStrip({
         gap: rem * 0.25,
       }}
     >
-      <Box
+      <HintClipBox
         style={{
           flexGrow: 1,
           flexBasis: 0,
@@ -220,7 +222,9 @@ export function TabStrip({
         }}
       >
         {entries.map(({ tab, width: tabWidth, ghost }) => (
-          <Box
+          <HintBox
+            hintId={`tab.${tab.id}.select`}
+            hintAlign="end"
             key={tab.id}
             style={{
               width: tabWidth,
@@ -244,35 +248,22 @@ export function TabStrip({
               flexShrink: tab.active && !ghost ? 1 : 0,
               overflow: "hidden",
             }}
-            onClick={() => (tab.active ? actions.urlEdit() : actions.tabSwitch(tab.id))}
+            onClick={ghost ? undefined : () => (tab.active ? actions.urlEdit() : actions.tabSwitch(tab.id))}
             onMouseEnter={() => setHovered(tab.id)}
             onMouseLeave={() => setHovered((id) => (id === tab.id ? null : id))}
           >
-            {hovered === tab.id && !ghost ? (
-              <Box
-                style={{
-                  width: slotW,
-                  height: slotW,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cornerRadius: rem * 0.2,
-                  hoverBackground: theme.hoverStrong,
-                  flexShrink: 0,
-                }}
-                onClick={() => actions.tabClose(tab.id)}
-              >
+            <HintBox
+              hintId={`tab.${tab.id}.close`}
+              style={{
+                width: slotW, height: slotW, alignItems: "center", justifyContent: "center",
+                cornerRadius: rem * 0.2, hoverBackground: theme.hoverStrong, flexShrink: 0,
+              }}
+              onHintClick={ghost ? undefined : () => actions.tabClose(tab.id)}
+              onClick={!ghost && (hinting || hovered === tab.id) ? () => actions.tabClose(tab.id) : undefined}
+            >
+              {(hinting || hovered === tab.id) && !ghost ? (
                 <Icon icon="close" size={rem * 0.8} color={theme.muted} />
-              </Box>
-            ) : tab.agentControlled && !tab.active && !ghost ? (
-              <Box
-                style={{
-                  width: slotW,
-                  height: slotW,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
+              ) : tab.agentControlled && !tab.active && !ghost ? (
                 <Box
                   style={{
                     width: slotW * 0.5,
@@ -281,21 +272,14 @@ export function TabStrip({
                     background: withAlpha(theme.accent, Math.round(255 * dotPulse)),
                   }}
                 />
-              </Box>
-            ) : tab.favicon ? (
-              <Image
-                src={tab.favicon}
-                error={<Box />}
-                style={{
-                  width: slotW,
-                  height: slotW,
-                  cornerRadius: rem * 0.15,
-                  flexShrink: 0,
-                }}
-              />
-            ) : (
-              <Box style={{ width: slotW, height: slotW, flexShrink: 0 }} />
-            )}
+              ) : tab.favicon ? (
+                <Image
+                  src={tab.favicon}
+                  error={<Box />}
+                  style={{ width: slotW, height: slotW, cornerRadius: rem * 0.15, flexShrink: 0 }}
+                />
+              ) : null}
+            </HintBox>
             <Text
               style={{
                 fontSize: rem * 0.82,
@@ -316,10 +300,10 @@ export function TabStrip({
             >
               {label(tab)}
             </Text>
-          </Box>
+          </HintBox>
         ))}
-      </Box>
-      <Box
+      </HintClipBox>
+      <HintBox hintId="tab.new"
         style={{
           width: rem * 1.5,
           height: rem * 1.5,
@@ -332,7 +316,7 @@ export function TabStrip({
         onClick={actions.tabNew}
       >
         <Icon icon="plus" size={rem * 1} color={theme.muted} />
-      </Box>
+      </HintBox>
     </Box>
   );
 }

@@ -120,6 +120,7 @@ export function createRoot(options: RootOptions = {}): Root {
   const cellZoom = new CellZoomFollower();
   const shell = new Shell(() => name);
   let registry: ViewRegistry | null = null;
+  let inputCaptured = false;
   let embedder: EmbedderHost | null = null;
   let server: OwnerServer | null = null;
   let record: InstanceRecord | null = null;
@@ -190,15 +191,15 @@ export function createRoot(options: RootOptions = {}): Root {
     onKey: (event) => {
       if (shell.handleKey(event)) return;
       if (!shell.guestActive() && options.onKey?.(event) === true) return;
-      registry?.handleKey(event);
+      if (!inputCaptured) registry?.handleKey(event);
     },
     onPaste: (text) => {
       if (!shell.guestActive()) options.onPaste?.(text);
-      registry?.handlePaste(text);
+      if (!inputCaptured) registry?.handlePaste(text);
     },
     onPasteImage: (image) => {
       if (!shell.guestActive()) options.onPasteImage?.(image);
-      registry?.handlePasteImage(image);
+      if (!inputCaptured) registry?.handlePasteImage(image);
     },
     onFocus: (focused) => {
       options.onFocus?.(focused);
@@ -374,6 +375,10 @@ export function createRoot(options: RootOptions = {}): Root {
           <PaneShell shell={shell}>{element}</PaneShell>
         </RootContext.Provider>,
       );
+    },
+    setInputCapture(enabled: boolean) {
+      inputCaptured = enabled;
+      engineRoot.setInputCapture(enabled);
     },
     loadURL,
     loadFile: (file, options) => loadURL(pathToFileURL(path.resolve(file)).href, options),

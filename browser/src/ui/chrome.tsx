@@ -16,6 +16,8 @@ import {
   ReviewToolbar,
 } from "./record-bar";
 import { TabStrip } from "./tab-strip";
+import { ChromeHintsContext, HintBox, HintStatus } from "./hints";
+import type { ChromeHints } from "../hints/chrome";
 import { makeTheme, mix, withAlpha } from "./theme";
 import type { Theme } from "./theme";
 import { usePulse } from "./pulse";
@@ -59,7 +61,9 @@ export function Chrome({
   devtools,
   profiling,
   grabActive,
+  hints,
 }: {
+  hints: ChromeHints;
   state: WebViewState;
   actions: ChromeActions;
   layout: ChromeLayout;
@@ -88,7 +92,7 @@ export function Chrome({
   const progress = useProgress(state.loading);
   const agentActive = tabs.some((tab) => tab.active && tab.agentControlled);
   const glowPulse = usePulse(agentActive);
-  return (
+  const content = (
     <Box
       style={{
         width: layout.width,
@@ -190,8 +194,10 @@ export function Chrome({
       {settings && (
         <SettingsCard view={settings} actions={actions.settings} layout={layout} theme={theme} />
       )}
+      <HintStatus />
     </Box>
   );
+  return <ChromeHintsContext.Provider value={hints}>{content}</ChromeHintsContext.Provider>;
 }
 
 const RAMP_S = 1.4;
@@ -305,6 +311,7 @@ function Toolbar({
       {(state.canGoBack || state.canGoForward) && (
         <>
           <ToolbarButton
+            hintId="page.back"
             icon="back"
             enabled={state.canGoBack}
             rem={rem}
@@ -312,6 +319,7 @@ function Toolbar({
             onClick={actions.back}
           />
           <ToolbarButton
+            hintId="page.forward"
             icon="forward"
             enabled={state.canGoForward}
             rem={rem}
@@ -321,6 +329,7 @@ function Toolbar({
         </>
       )}
       <ToolbarButton
+        hintId="page.reload"
         icon={stopIcon ? "close" : "reload"}
         enabled
         rem={rem}
@@ -336,6 +345,7 @@ function Toolbar({
         theme={theme}
       />
       <ToolbarButton
+        hintId="grab.toggle"
         icon="select"
         enabled
         active={grabActive}
@@ -343,7 +353,7 @@ function Toolbar({
         theme={theme}
         onClick={actions.grab}
       />
-      <ToolbarButton icon="more" enabled rem={rem} theme={theme} onClick={actions.tabMenu} />
+      <ToolbarButton hintId="menu.open" icon="more" enabled rem={rem} theme={theme} onClick={actions.tabMenu} />
       {record && <RecordToolbarPill view={record} actions={actions} rem={rem} theme={theme} />}
       {profiling && <ProfilingPill actions={actions} rem={rem} theme={theme} />}
     </Box>
@@ -643,6 +653,7 @@ function DevtoolsPane({
 const GRAB_ACTIVE: Rgba = [0xb3, 0x45, 0xa0, 255];
 
 function ToolbarButton({
+  hintId,
   icon,
   enabled,
   active = false,
@@ -650,6 +661,7 @@ function ToolbarButton({
   theme,
   onClick,
 }: {
+  hintId: string;
   icon: IconName;
   enabled: boolean;
   active?: boolean;
@@ -659,7 +671,7 @@ function ToolbarButton({
 }) {
   const color = !enabled ? theme.disabled : active ? GRAB_ACTIVE : theme.muted;
   return (
-    <Box
+    <HintBox hintId={hintId}
       style={{
         width: rem * 1.5,
         height: rem * 1.5,
@@ -673,7 +685,7 @@ function ToolbarButton({
       onClick={enabled ? onClick : undefined}
     >
       <Icon icon={icon} size={rem * 1.1} color={color} />
-    </Box>
+    </HintBox>
   );
 }
 

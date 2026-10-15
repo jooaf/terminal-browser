@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Box, Input, Text } from "@zenbu-labs/pixel";
 import type { NodeHandle } from "@zenbu-labs/pixel";
 import { Icon } from "../icons";
+import { HintBox } from "../hints";
 import { withAlpha } from "../theme";
 import type { Theme } from "../theme";
 import type { SettingsActions, SettingsView, ShortcutRow } from "../types";
@@ -29,7 +30,7 @@ export function ShortcutsPane({
   }, [view.recording]);
   return (
     <>
-      <Box
+      <HintBox hintId="settings.shortcuts.search" onHintClick={() => input.current?.focus()}
         style={{
           height: rem * 2.6,
           flexShrink: 0,
@@ -48,8 +49,9 @@ export function ShortcutsPane({
           selectionColor={theme.selection}
           onChange={(text) => actions.query(text)}
         />
-      </Box>
+      </HintBox>
       <ScrollPane
+        hintId="settings.shortcuts.scroll"
         rem={rem}
         resetKey={view.shortcuts.length}
         style={{
@@ -134,10 +136,11 @@ function ShortcutLine({
         </Text>
       )}
       {row.keys.length === 0 ? (
-        <Chip text={copy.unbound} tone="muted" rem={rem} theme={theme} onClick={toggleRecord} />
+        <Chip hintId={`shortcut.${row.id}.bind`} text={copy.unbound} tone="muted" rem={rem} theme={theme} onClick={toggleRecord} />
       ) : (
         row.keys.map((key) => (
           <Chip
+            hintId={`shortcut.${row.id}.bind.${key}`}
             key={key}
             text={key}
             tone={row.modified ? "modified" : "default"}
@@ -150,14 +153,17 @@ function ShortcutLine({
       <Box style={{ width: rem * (row.modified ? 2.65 : 1.25), flexShrink: 0, gap: rem * 0.15 }}>
         {row.modified && (
           <IconButton
+            hintId={`shortcut.${row.id}.reset`}
             icon="reload"
             rem={rem}
             theme={theme}
             onClick={() => actions.resetShortcut(row.id)}
           />
         )}
-        {hover && !recording && row.keys.length > 0 && (
+        {!recording && row.keys.length > 0 && (
           <IconButton
+            hintId={`shortcut.${row.id}.unbind`}
+            visible={hover}
             icon="close"
             rem={rem}
             theme={theme}
@@ -170,12 +176,14 @@ function ShortcutLine({
 }
 
 function Chip({
+  hintId,
   text,
   tone,
   rem,
   theme,
   onClick,
 }: {
+  hintId: string;
   text: string;
   tone: "default" | "modified" | "muted";
   rem: number;
@@ -185,7 +193,7 @@ function Chip({
   const border = tone === "modified" ? withAlpha(theme.accent, 150) : theme.fieldBorder;
   const color = tone === "muted" ? theme.disabled : theme.fg;
   return (
-    <Box
+    <HintBox hintId={hintId}
       style={{
         height: rem * 1.35,
         flexShrink: 0,
@@ -199,6 +207,6 @@ function Chip({
       onClick={onClick}
     >
       <Text style={{ fontSize: rem * 0.78, color, wrap: false, selectable: false }}>{text}</Text>
-    </Box>
+    </HintBox>
   );
 }

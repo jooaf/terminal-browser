@@ -3,24 +3,28 @@ import { Backdrop } from "../modals";
 import type { Theme } from "../theme";
 import type { ChromeLayout } from "../types";
 import { copy } from "./copy";
+import { HintLayer } from "../hints";
+import { TextButton } from "./controls";
 
 export function RecordDialog({
   keys,
   layout,
   theme,
   onCancel,
+  onSave,
 }: {
   keys: string;
   layout: ChromeLayout;
   theme: Theme;
   onCancel(): void;
+  onSave(): void;
 }) {
   const rem = layout.rem;
   const width = Math.round(Math.min(layout.width - rem * 4, rem * 46));
   const height = Math.round(rem * 7.5);
   const areaTop = layout.toolbarHeight;
   return (
-    <>
+    <HintLayer scope="shortcut" onDismiss={onCancel}>
       <Backdrop layout={layout} onClose={onCancel} />
       <Box
         style={{
@@ -59,7 +63,11 @@ export function RecordDialog({
         >
           <Text style={{ fontSize: rem * 1, wrap: false, selectable: false }}>{keys}</Text>
         </Box>
+        <Box style={{ gap: rem }}>
+          {keys && <TextButton hintId="shortcut.save" label="Save shortcut" rem={rem} theme={theme} onClick={onSave} />}
+          <TextButton hintId="shortcut.cancel" label="Cancel" rem={rem} theme={theme} onClick={onCancel} />
+        </Box>
       </Box>
-    </>
+    </HintLayer>
   );
 }

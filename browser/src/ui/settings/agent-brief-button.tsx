@@ -1,7 +1,8 @@
-import { Box, Text } from "@zenbu-labs/pixel";
+import { Text } from "@zenbu-labs/pixel";
 import type { Theme } from "../theme";
 import { copy } from "./copy";
 import { CopyIcon, useCopiedFlash } from "./copied";
+import { HintBox } from "../hints";
 
 export function AgentBriefButton({
   rem,
@@ -14,7 +15,7 @@ export function AgentBriefButton({
 }) {
   const [copied, flash] = useCopiedFlash();
   return (
-    <Box
+    <HintBox hintId="settings.copy-agent-brief"
       style={{
         alignItems: "center",
         gap: rem * 0.7,
@@ -41,6 +42,6 @@ export function AgentBriefButton({
         {copy.agent}
       </Text>
       <CopyIcon copied={copied} size={rem * 0.95} theme={theme} />
-    </Box>
+    </HintBox>
   );
 }

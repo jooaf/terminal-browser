@@ -172,9 +172,7 @@ export class SettingsManager {
       return;
     }
     if (pressed === "enter" && recording.chord) {
-      const keys = [formatChord(recording.chord)];
-      this.modal!.recording = null;
-      this.write(() => this.config.setShortcut(recording.id, keys));
+      this.actions.saveRecording();
       return;
     }
     recording.chord = chord;
@@ -206,6 +204,13 @@ export class SettingsManager {
       if (!this.modal) return;
       this.modal.recording = null;
       this.host.requestRender();
+    },
+    saveRecording: () => {
+      const recording = this.modal?.recording;
+      if (!recording?.chord) return;
+      const keys = [formatChord(recording.chord)];
+      this.modal!.recording = null;
+      this.write(() => this.config.setShortcut(recording.id, keys));
     },
     resetShortcut: (id) => {
       if (isCommandId(id)) this.write(() => this.config.setShortcut(id, undefined));

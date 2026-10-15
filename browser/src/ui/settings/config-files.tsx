@@ -1,4 +1,5 @@
 import { Box, Text } from "@zenbu-labs/pixel";
+import { HintBox } from "../hints";
 import type { Theme } from "../theme";
 import type { SettingsActions, SettingsView } from "../types";
 import { copy } from "./copy";
@@ -21,36 +22,41 @@ export function ConfigFiles({
     <Box
       style={{
         flexDirection: "column",
+        flexShrink: 0,
         gap: rem * 0.45,
         padding: { top: rem * 1.1, left: rem * PANE_PADDING_REMS, right: rem * PANE_PADDING_REMS },
       }}
     >
       <Text style={{ fontSize: rem * 1, wrap: false, selectable: false }}>{copy.configFiles}</Text>
       <PathLine
+        hintId="settings.copy-settings-path"
         path={view.files.settings}
         rem={rem}
         theme={theme}
         onCopy={() => actions.copyPath("settings")}
       />
       <PathLine
+        hintId="settings.copy-shortcuts-path"
         path={view.files.shortcuts}
         rem={rem}
         theme={theme}
         onCopy={() => actions.copyPath("shortcuts")}
       />
       <Box style={{ margin: { top: rem * 0.3 } }}>
-        <TextButton label={copy.reload} rem={rem} theme={theme} onClick={actions.reloadConfig} />
+        <TextButton hintId="settings.reload" label={copy.reload} rem={rem} theme={theme} onClick={actions.reloadConfig} />
       </Box>
     </Box>
   );
 }
 
 function PathLine({
+  hintId,
   path,
   rem,
   theme,
   onCopy,
 }: {
+  hintId: string;
   path: string;
   rem: number;
   theme: Theme;
@@ -60,10 +66,11 @@ function PathLine({
   return (
     <Box style={{ flexDirection: "column" }}>
       <Box style={{ alignItems: "center", gap: rem * 0.5 }}>
-        <Text style={{ fontSize: rem * 0.85, color: theme.muted, wrap: false }}>{path}</Text>
-        <Box
+        <Text style={{ flexGrow: 1, flexBasis: 0, minWidth: 0, overflow: "hidden", fontSize: rem * 0.85, color: theme.muted, wrap: false }}>{path}</Text>
+        <HintBox hintId={hintId}
           style={{
             width: rem * 1.6,
+            flexShrink: 0,
             height: rem * 1.6,
             alignItems: "center",
             justifyContent: "center",
@@ -76,7 +83,7 @@ function PathLine({
           }}
         >
           <CopyIcon copied={copied} size={rem * 1} theme={theme} />
-        </Box>
+        </HintBox>
       </Box>
     </Box>
   );

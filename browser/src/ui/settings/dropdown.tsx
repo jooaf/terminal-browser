@@ -2,6 +2,8 @@ import { useRef } from "react";
 import { Box, Image, Text, useRect } from "@zenbu-labs/pixel";
 import type { NodeHandle, Rect } from "@zenbu-labs/pixel";
 import { Icon } from "../icons";
+import { HintBox, HintLayer } from "../hints";
+import { ScrollPane } from "./scroll-pane";
 import { mix, withAlpha } from "../theme";
 import type { Theme } from "../theme";
 import type { SettingChoiceView } from "../types";
@@ -22,6 +24,7 @@ export interface OpenDropdown {
 }
 
 export function Dropdown({
+  hintId,
   choices,
   value,
   open,
@@ -33,6 +36,7 @@ export function Dropdown({
   choices: SettingChoiceView[];
   value: string;
   open: boolean;
+  hintId: string;
   width: number;
   rem: number;
   theme: Theme;
@@ -43,7 +47,7 @@ export function Dropdown({
   const height = rem * ITEM_HEIGHT_REMS;
   const current = choices.find((choice) => choice.value === value);
   return (
-    <Box
+    <HintBox hintId={hintId}
       ref={box}
       style={{
         width,
@@ -74,7 +78,7 @@ export function Dropdown({
         {current?.name ?? value}
       </Text>
       <Icon icon="down" size={rem * 0.75} color={theme.muted} />
-    </Box>
+    </HintBox>
   );
 }
 
@@ -101,61 +105,66 @@ export function DropdownMenu({
 }) {
   const itemHeight = rem * MENU_ITEM_HEIGHT_REMS;
   const padding = rem * MENU_PADDING_REMS;
-  const height = choices.length * itemHeight + padding * 2;
+  const height = Math.min(choices.length * itemHeight + padding * 2 + 2 + rem * 1.7, Math.max(rem * 4, bounds.height - rem));
   const gap = rem * 0.25;
   const below = rect.y + rect.height + gap;
   const top = Math.round(below + height <= bounds.height ? below : Math.max(0, rect.y - gap - height));
   return (
-    <Box
-      style={{
-        position: "absolute",
-        inset: { top, left: Math.round(Math.min(rect.x, bounds.width - rect.width)) },
-        width: rect.width,
-        flexDirection: "column",
-        padding,
-        gap: 1,
-        background: withAlpha(mix(theme.overlay, theme.fg, 0.08), 255),
-        cornerRadius: rem * 0.3,
-        border: { width: 1, color: theme.fieldBorder },
-      }}
-      onClickOutside={onDismiss}
-      onWheel={() => {}}
-    >
-      {choices.map((choice) => {
-        const active = choice.value === value;
-        return (
-          <Box
-            key={choice.value}
-            style={{
-              height: itemHeight,
-              alignItems: "center",
-              gap: rem * 0.5,
-              padding: { left: rem * 0.6, right: rem * 0.5 },
-              cornerRadius: rem * 0.25,
-              background: active ? theme.hover : undefined,
-              hoverBackground: theme.hoverStrong,
-            }}
-            onClick={() => onPick(choice.value)}
-          >
-            {choice.logo && <ChoiceLogo src={choice.logo} size={rem * 1.15} />}
-            <Text
-              style={{
-                flexGrow: 1,
-                flexBasis: 0,
-                fontSize: rem * 0.88,
-                color: theme.fg,
-                wrap: false,
-                ellipsis: true,
-                selectable: false,
-              }}
-            >
-              {choice.name}
-            </Text>
-            {active && <Icon icon="check" size={rem * 0.75} color={theme.fg} />}
-          </Box>
-        );
-      })}
-    </Box>
+    <HintLayer scope="dropdown" onDismiss={onDismiss}>
+      <Box
+        style={{
+          position: "absolute",
+          inset: { top, left: Math.round(Math.min(rect.x, bounds.width - rect.width)) },
+          width: rect.width,
+          height,
+          flexDirection: "column",
+          padding,
+          background: withAlpha(mix(theme.overlay, theme.fg, 0.08), 255),
+          cornerRadius: rem * 0.3,
+          border: { width: 1, color: theme.fieldBorder },
+        }}
+        onClickOutside={onDismiss}
+        onWheel={() => {}}
+      >
+        <ScrollPane hintId="settings.dropdown.scroll" rem={rem} resetKey={choices.length} style={{ flexGrow: 1, flexBasis: 0 }}>
+          {choices.map((choice) => {
+            const active = choice.value === value;
+            return (
+              <HintBox hintId={`settings.dropdown.choice.${choice.value}`}
+                key={choice.value}
+                style={{
+                  height: itemHeight,
+                  flexShrink: 0,
+                  alignItems: "center",
+                  gap: rem * 0.5,
+                  padding: { left: rem * 0.6, right: rem * 0.5 },
+                  cornerRadius: rem * 0.25,
+                  background: active ? theme.hover : undefined,
+                  hoverBackground: theme.hoverStrong,
+                }}
+                onClick={() => onPick(choice.value)}
+              >
+                {choice.logo && <ChoiceLogo src={choice.logo} size={rem * 1.15} />}
+                <Text
+                  style={{
+                    flexGrow: 1,
+                    flexBasis: 0,
+                    fontSize: rem * 0.88,
+                    color: theme.fg,
+                    wrap: false,
+                    ellipsis: true,
+                    selectable: false,
+                  }}
+                >
+                  {choice.name}
+                </Text>
+                {active && <Icon icon="check" size={rem * 0.75} color={theme.fg} />}
+              </HintBox>
+            );
+          })}
+        </ScrollPane>
+      </Box>
+    </HintLayer>
   );
 }
 

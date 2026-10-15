@@ -2,20 +2,26 @@ import { Box, Text } from "@zenbu-labs/pixel";
 import { Icon } from "../icons";
 import type { IconName } from "../icons";
 import type { Theme } from "../theme";
+import { HintBox, useChromeHints } from "../hints";
 
 export function IconButton({
+  hintId,
+  visible = true,
   icon,
   rem,
   theme,
   onClick,
 }: {
+  hintId: string;
+  visible?: boolean;
   icon: IconName;
   rem: number;
   theme: Theme;
   onClick(): void;
 }) {
+  const hinting = useChromeHints().active;
   return (
-    <Box
+    <HintBox hintId={hintId}
       style={{
         width: rem * 1.6,
         height: rem * 1.6,
@@ -25,26 +31,29 @@ export function IconButton({
         cornerRadius: rem * 0.3,
         hoverBackground: theme.hoverStrong,
       }}
-      onClick={onClick}
+      onHintClick={onClick}
+      onClick={visible || hinting ? onClick : undefined}
     >
-      <Icon icon={icon} size={rem * 1} color={theme.muted} />
-    </Box>
+      {(visible || hinting) && <Icon icon={icon} size={rem * 1} color={theme.muted} />}
+    </HintBox>
   );
 }
 
 export function TextButton({
+  hintId,
   label,
   rem,
   theme,
   onClick,
 }: {
+  hintId: string;
   label: string;
   rem: number;
   theme: Theme;
   onClick(): void;
 }) {
   return (
-    <Box
+    <HintBox hintId={hintId}
       style={{
         height: rem * 1.55,
         alignItems: "center",
@@ -57,16 +66,18 @@ export function TextButton({
       onClick={onClick}
     >
       <Text style={{ fontSize: rem * 0.85, wrap: false, selectable: false }}>{label}</Text>
-    </Box>
+    </HintBox>
   );
 }
 
 export function Toggle({
+  hintId,
   on,
   rem,
   theme,
   onChange,
 }: {
+  hintId: string;
   on: boolean;
   rem: number;
   theme: Theme;
@@ -75,7 +86,7 @@ export function Toggle({
   const height = Math.round(rem * 1.2);
   const knob = height - 6;
   return (
-    <Box
+    <HintBox hintId={hintId}
       style={{
         width: Math.round(rem * 2.2),
         height,
@@ -98,6 +109,6 @@ export function Toggle({
           background: on ? theme.fg : theme.muted,
         }}
       />
-    </Box>
+    </HintBox>
   );
 }

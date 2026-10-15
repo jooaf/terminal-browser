@@ -218,6 +218,7 @@ export interface PixelRoot {
   setPointerShape(shape: string): void;
   setClearColor(color: Rgba): void;
   setKeyCapture(keys: string[]): void;
+  setInputCapture(enabled: boolean): void;
   requestClipboardImage(): void;
   setClipboard(text: string): void;
   setTitle(text: string): void;
@@ -796,6 +797,10 @@ export function createRoot(options: RootOptions = {}): PixelRoot {
     },
     setClearColor(color: Rgba) {
       bridge.push(APP_VIEW, { op: "setClearColor", color });
+      bridge.flush();
+    },
+    setInputCapture(enabled: boolean) {
+      bridge.push(APP_VIEW, { op: "setInputCapture", enabled });
       bridge.flush();
     },
     setKeyCapture(keys: string[]) {

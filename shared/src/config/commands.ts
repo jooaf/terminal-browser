@@ -2,9 +2,12 @@ type CommandKeys =
   | { kind: "shared"; keys: string[] }
   | { kind: "platform"; mac: string[]; other: string[] };
 
+export type CommandContext = "browser" | "hints";
+
 interface CommandDef {
   label: string;
   keys: CommandKeys;
+  context?: CommandContext;
 }
 
 const shared = (keys: string[]): CommandKeys => ({ kind: "shared", keys });
@@ -27,6 +30,8 @@ export const COMMANDS = {
   "devtools.console": { label: "Devtools console", keys: platform(["cmd+alt+j"], ["ctrl+alt+j"]) },
   "record.toggle": { label: "Record page", keys: platform(["ctrl+r"], ["ctrl+shift+r"]) },
   "grab.toggle": { label: "Send to agent", keys: shared(["ctrl+g"]) },
+  "hints.show": { label: "Show keyboard hints", keys: shared(["ctrl+shift+h"]) },
+  "hints.click": { label: "Click hovered hint", keys: shared(["enter"]), context: "hints" },
   "zoom.in": { label: "Zoom in", keys: platform(["cmd+=", "ctrl+="], ["ctrl+="]) },
   "zoom.out": { label: "Zoom out", keys: platform(["cmd+-", "ctrl+-"], ["ctrl+-"]) },
   "zoom.reset": { label: "Reset zoom", keys: platform(["cmd+0", "ctrl+0"], ["ctrl+0"]) },
@@ -45,6 +50,11 @@ export const COMMAND_IDS = Object.keys(COMMANDS) as CommandId[];
 
 export function isCommandId(value: string): value is CommandId {
   return Object.prototype.hasOwnProperty.call(COMMANDS, value);
+}
+
+export function commandContext(id: CommandId): CommandContext {
+  const command: CommandDef = COMMANDS[id];
+  return command.context ?? "browser";
 }
 
 export function commandLabel(id: CommandId): string {

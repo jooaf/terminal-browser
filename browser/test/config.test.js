@@ -60,6 +60,40 @@ test("keymap matches defaults, overrides, and unbinding", () => {
   assert.equal(custom.match(press("f", { super: true, shift: true })), null);
 });
 
+test("keyboard hints have a configurable shortcut on every platform", () => {
+  assert.deepEqual(defaultKeys("hints.show", "darwin"), ["ctrl+shift+h"]);
+  assert.deepEqual(defaultKeys("hints.show", "linux"), ["ctrl+shift+h"]);
+  const defaults = new Keymap({}, { noSuper: false });
+  assert.equal(defaults.match(press("h", { ctrl: true, shift: true })), "hints.show");
+  assert.deepEqual(defaults.conflicts("hints.show"), []);
+  const custom = new Keymap({ "hints.show": ["alt+j"] }, { noSuper: false });
+  assert.equal(custom.match(press("j", { alt: true })), "hints.show");
+  assert.equal(custom.match(press("h", { ctrl: true, shift: true })), null);
+});
+
+test("hint clicking is configurable and never intercepts normal page typing", () => {
+  const defaults = new Keymap({}, { noSuper: false });
+  assert.equal(defaults.match(press("enter")), null);
+  assert.equal(defaults.match(press("enter"), "hints"), "hints.click");
+  const custom = new Keymap({ "hints.click": ["ctrl+g"] }, { noSuper: false });
+  assert.equal(custom.match(press("g", { ctrl: true })), "grab.toggle");
+  assert.equal(custom.match(press("g", { ctrl: true }), "hints"), "hints.click");
+  assert.deepEqual(custom.conflicts("hints.click"), []);
+  assert.deepEqual(new Keymap({ "hints.click": null }, { noSuper: false }).labels("hints.click"), []);
+});
+
+test("hint alphabet settings validate and round trip", () => {
+  const store = tempStore();
+  assert.equal(store.load().settings["hints.alphabet"], "asdfghjkl");
+  store.setSetting("hints.alphabet", "jkl");
+  assert.equal(store.load().settings["hints.alphabet"], "jkl");
+  for (const invalid of ["", "a", "aba", "ABC", "a b", "a1"]) {
+    store.setSetting("hints.alphabet", invalid);
+    assert.equal(store.load().errors.length, 1);
+    assert.equal(store.load().settings["hints.alphabet"], "asdfghjkl");
+  }
+});
+
 test("keymap swaps super for alt when the terminal cannot report super", () => {
   const noSuper = new Keymap({}, { noSuper: true });
   const macNewTab = new Keymap({}, { noSuper: false }).match(press("t", { super: true }));

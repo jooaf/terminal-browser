@@ -117,6 +117,7 @@ export interface SettingsActions {
   query(text: string): void;
   recordShortcut(id: string): void;
   cancelRecording(): void;
+  saveRecording(): void;
   resetShortcut(id: string): void;
   unbindShortcut(id: string): void;
   set(key: string, value: string): void;

@@ -330,6 +330,7 @@ pub struct Engine {
     bar_drag: Option<(usize, NodeId, f32)>,
     reveal: bool,
     pub key_capture: Vec<String>,
+    pub input_capture: bool,
     pub cpu_throttle: CpuThrottle,
     throttle_registered: bool,
     scroll_burst: u32,
@@ -444,6 +445,7 @@ impl Engine {
             bar_drag: None,
             reveal: false,
             key_capture: Vec::new(),
+            input_capture: false,
             cpu_throttle: CpuThrottle::new(),
             throttle_registered: false,
             scroll_burst: 0,
@@ -937,7 +939,12 @@ impl Engine {
                 crate::profiler::mark("paste", self.active_view as u32, || {
                     format!("paste ({} chars)", text.chars().count())
                 });
-                if let Some((view, focus)) = self.focused() {
+                if self.input_capture {
+                    out.push(EngineEvent::Paste {
+                        view: self.active_view,
+                        text,
+                    });
+                } else if let Some((view, focus)) = self.focused() {
                     if let Some(image) = crate::clipboard_image::image_path_from_paste(&text) {
                         self.push_paste_image(view, focus, image, out);
                     } else {

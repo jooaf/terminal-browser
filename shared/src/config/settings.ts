@@ -60,6 +60,14 @@ export const SETTINGS = {
       { value: SUGGESTIONS_OFF, name: "Off", logo: null },
     ],
   }),
+  "hints.alphabet": setting({
+    group: "general",
+    label: "Keyboard hint letters",
+    hint: "Two or more different lowercase letters used to label page and browser controls, in preferred order.",
+    schema: z.string().regex(/^[a-z]{2,26}$/, "use 2–26 lowercase letters")
+      .refine((value) => new Set(value).size === value.length, "each letter must appear only once"),
+    default: "asdfghjkl",
+  }),
   "telemetry.usage": setting({
     group: "general",
     label: "Disable anonymous telemetry",

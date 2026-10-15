@@ -1,7 +1,7 @@
 import type { EngineKeyEvent, KeyMods } from "@zenbu-labs/pixel";
 
-import { COMMAND_IDS, defaultKeys } from "./commands";
-import type { CommandId } from "./commands";
+import { COMMAND_IDS, commandContext, defaultKeys } from "./commands";
+import type { CommandContext, CommandId } from "./commands";
 
 export interface Chord extends KeyMods {
   key: string;
@@ -128,10 +128,11 @@ export class Keymap {
     }
   }
 
-  match(event: EngineKeyEvent): CommandId | null {
+  match(event: EngineKeyEvent, context: CommandContext = "browser"): CommandId | null {
     const pressed = chordFromEvent(event);
     if (!pressed) return null;
     for (const binding of this.bindings.values()) {
+      if (commandContext(binding.id) !== context) continue;
       if (binding.chords.some((chord) => sameChord(chord, pressed))) return binding.id;
     }
     return null;
@@ -158,7 +159,7 @@ export class Keymap {
     return this.all()
       .filter(
         (other) =>
-          other.id !== id &&
+          other.id !== id && commandContext(other.id) === commandContext(id) &&
           other.chords.some((chord) => own.some((mine) => sameChord(mine, chord))),
       )
       .map((other) => other.id);

@@ -1,5 +1,6 @@
 import { Box, Image, Path, Text } from "@zenbu-labs/pixel";
 import type { Theme } from "./theme";
+import { HintBox, HintLayer } from "./hints";
 import type { ChromeActions, ChromeLayout, PageMenuIcon, PageMenuItem, PageMenuView } from "./types";
 
 export function PageContextMenu({
@@ -31,7 +32,7 @@ export function PageContextMenu({
   const x = Math.max(2, Math.min(view.x, layout.width - width - 4));
   const y = Math.max(2, Math.min(view.y, layout.height - height - 4));
   return (
-    <>
+    <HintLayer scope="menu" onDismiss={actions.pageMenuClose}>
       <Box
         style={{
           position: "absolute",
@@ -58,7 +59,7 @@ export function PageContextMenu({
           <MenuRow key={item.id} item={item} rowH={rowH} rem={rem} theme={theme} actions={actions} alignIcons={hasIcons} />
         ))}
       </Box>
-    </>
+    </HintLayer>
   );
 }
 
@@ -78,7 +79,7 @@ function MenuRow({
   alignIcons: boolean;
 }) {
   return (
-    <Box
+    <HintBox hintId={`menu.${item.id}`} hintScope="menu" hintAlign="end"
       style={{
         height: rowH,
         alignItems: "center",
@@ -119,7 +120,7 @@ function MenuRow({
           {item.shortcut}
         </Text>
       )}
-    </Box>
+    </HintBox>
   );
 }
 

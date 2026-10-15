@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Box, Input, Text } from "@zenbu-labs/pixel";
-import type { Rect } from "@zenbu-labs/pixel";
+import type { NodeHandle, Rect } from "@zenbu-labs/pixel";
+import { HintBox } from "../hints";
 import { withAlpha } from "../theme";
 import type { Theme } from "../theme";
 import type { ReleaseView, SettingGroup, SettingRow, SettingsActions, SettingsView } from "../types";
@@ -36,6 +37,7 @@ export function GeneralPane({
   const rows = view.settings.filter((row) => row.group === group);
   return (
     <ScrollPane
+      hintId={`settings.${group}.scroll`}
       rem={rem}
       resetKey={rows.length}
       style={{ flexGrow: 1, flexBasis: 0, flexDirection: "column", padding: { bottom: rem * 1 } }}
@@ -113,7 +115,7 @@ export function SettingLine({
   const showReset = row.modified && (hover || row.group === "advanced");
   const reset = (
     <Box style={{ width: rem * 1.6, height: rem * 1.6, flexShrink: 0 }}>
-      {showReset && <IconButton icon="reload" rem={rem} theme={theme} onClick={() => actions.reset(row.key)} />}
+      {row.modified && <IconButton hintId={`setting.${row.key}.reset`} visible={showReset} icon="reload" rem={rem} theme={theme} onClick={() => actions.reset(row.key)} />}
     </Box>
   );
   return (
@@ -136,6 +138,7 @@ export function SettingLine({
         {reset}
         {row.kind === "toggle" && (
           <Toggle
+            hintId={`setting.${row.key}.toggle`}
             on={(row.value === "on") !== row.inverted}
             rem={rem}
             theme={theme}
@@ -144,6 +147,7 @@ export function SettingLine({
         )}
         {row.kind === "choice" && (
           <Dropdown
+            hintId={`setting.${row.key}.dropdown`}
             choices={row.custom ? withCustom(row.choices) : row.choices}
             value={customShown || !preset ? CUSTOM : row.value}
             open={menu?.key === row.key}
@@ -180,8 +184,9 @@ function TemplateField({
   rem: number;
   theme: Theme;
 }) {
+  const input = useRef<NodeHandle>(null);
   return (
-    <Box
+    <HintBox hintId={`setting.${row.key}.input`} onHintClick={() => input.current?.focus()}
       style={{
         width,
         height: rem * 2.1,
@@ -193,6 +198,7 @@ function TemplateField({
       }}
     >
       <Input
+        ref={input}
         key={row.value}
         defaultValue={row.value}
         style={{ flexGrow: 1, flexBasis: 0, wrap: false, fontSize: rem * 0.9 }}
@@ -201,6 +207,6 @@ function TemplateField({
         onChange={(text) => actions.draft(row.key, text)}
         onSubmit={(text) => actions.set(row.key, text)}
       />
-    </Box>
+    </HintBox>
   );
 }

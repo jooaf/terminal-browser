@@ -9,6 +9,35 @@ A real browser that runs inside your terminal
 
 
 ## Installation
+
+### Build this fork from source (Nushell)
+
+This fork adds hover-first keyboard label navigation across webpages, browser controls, and Settings. Build from this checkout to get those changes; the upstream installers below do not install this fork.
+
+Requirements: Node.js 22+, pnpm 10, Rust/Cargo, and Nushell (tested with 0.114.2). On macOS, install the Xcode command-line tools. The helper builds for the current machine; it has been tested on Apple Silicon.
+
+From your checkout:
+
+```nu
+use scripts/build-local.nu build-terminal-browser
+build-terminal-browser
+terminal-browser open https://example.com
+```
+
+The helper installs locked dependencies, builds Pixel's native engine and the application, and links the CLI into `~/.local/bin`. It also prepends that directory to the current shell's PATH without changing your working directory. Keep the checkout and its dependencies: this is a source-backed installation, not a standalone executable. An existing `terminal-browser` launcher at that location is replaced.
+
+To use a different bin directory, run `build-terminal-browser --bin-dir ~/bin`. For new shells, ensure your chosen directory is on PATH; for the default, add this to your Nushell `env.nu` if needed:
+
+```nu
+$env.PATH = ($env.PATH | prepend ($env.HOME | path join .local bin) | uniq | collect)
+```
+
+After changing or pulling source, run `build-terminal-browser` again and restart open browsers. Source builds report version `dev` and do not check for published updates. Do not use `terminal-browser upgrade` for this fork. Pushes to `main` do not trigger release publishing; the existing tag/manual release workflow is not configured for this fork.
+
+### Upstream packages
+
+These install the upstream project, not this fork's label-navigation changes.
+
 ### curl (macOS & Linux):
 
 ```bash
@@ -73,9 +102,30 @@ terminal-browser upgrade # upgrade to the latest version
 | Record page (start/stop) | ctrl+r | ctrl+shift+r |
 | Complete recording review | ctrl+enter | ctrl+enter |
 | Start element selection (send to agent) | ctrl+g | ctrl+g |
+| Show keyboard hints | ctrl+shift+h | ctrl+shift+h |
 | Close popup / overlay | escape | escape |
 
 
+
+### Keyboard label navigation (hover first)
+
+Press **Ctrl+Shift+H**, then type a label to hover over a page target or highlight a browser control without moving your desktop cursor. Press **Enter** to click or **Esc** to cancel. **Backspace** edits an incomplete label.
+
+Page controls, tabs, tab-close buttons, new-tab, navigation, element selection, and the ellipsis share one set of unique labels. Hint mode reveals every visible tab's close button immediately. The active tab's main label edits its URL; inactive tab labels switch tabs. After opening the ellipsis menu, invoke hints again to label its items. The same applies to newly revealed webpage hover menus.
+
+Settings supports hints for sections, fields, toggles, dropdown choices, resets, shortcut editing, copy actions, and closing. Only the topmost Settings dropdown or shortcut dialog receives labels. Use the labelled **Scroll up / Scroll down** controls to reach off-screen settings, then invoke hints again. Selecting a field and clicking focuses it for typing; hint letters and paste never modify a field while hint mode is active. Escape cancels hints first; a subsequent Escape dismisses the topmost Settings layer.
+
+For example, to change a setting without the mouse:
+1. Invoke hints, type the ellipsis button's label, then press Enter.
+2. Invoke hints again and select Settings the same way.
+3. Invoke hints inside Settings, select a toggle, field, or dropdown, then press Enter. A field is now ready for typing; an opened dropdown needs another hint invocation to label its choices.
+
+Configure these in Settings:
+- **General → Keyboard hint letters** (`hints.alphabet`): 2–26 different lowercase letters, in preferred order. Default: `asdfghjkl`.
+- **Shortcuts → Show keyboard hints** (`hints.show`): activation shortcut. Default: `Ctrl+Shift+H`.
+- **Shortcuts → Click hovered hint** (`hints.click`): click after selecting a target. Default: `Enter`. This binding applies only in hint mode, so it can reuse a normal browser shortcut. Escape remains reserved for cancellation.
+
+“Show keyboard hints” is also available in the command palette. Page targets include visible native and ARIA controls, associated labels, hover-menu triggers, and pointer-style elements in the main document and open shadow DOM. Iframe contents, closed shadow DOM, and controls drawn inside canvases are not supported. Hints are unavailable during browser recording or element selection. Shortcut-recording dialogs do support hints for Save and Cancel; the hint activation shortcut is reserved while recording a binding. Other browser input dialogs and Chromium-native menus (such as a webpage's select picker) do not receive labels; use their normal keyboard controls. Separate popup windows are not supported: close them before invoking page hints, so labels cannot activate the covered page.
 
 ### How does it work?
 Terminals that support the kitty graphics protocol, including ghostty, kitty, cmux, vscode and many more, allow a program running in a terminal to display pixels in your terminal. We use this capability to display pixels generated by chromium.

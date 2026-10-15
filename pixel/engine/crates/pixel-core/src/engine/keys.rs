@@ -104,7 +104,7 @@ fn capture_matches(name: &str, key: &KeyEvent) -> bool {
 impl Engine {
     pub(super) fn handle_key(&mut self, key: KeyEvent, out: &mut Vec<EngineEvent>) -> io::Result<()> {
         crate::profiler::mark("key", self.active_view as u32, || key_label(&key));
-        if self.key_passthrough {
+        if self.input_capture || self.key_passthrough {
             out.push(EngineEvent::Key {
                 view: self.active_view,
                 event: key,

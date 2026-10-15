@@ -145,6 +145,9 @@ enum Op {
     SetKeyCapture {
         keys: Vec<String>,
     },
+    SetInputCapture {
+        enabled: bool,
+    },
     SetPointerShape {
         shape: String,
     },
@@ -879,6 +882,7 @@ fn apply_op(
         }
         Op::RegisterFont { .. } => unreachable!("handled before the per-view bindings"),
         Op::SetKeyCapture { keys } => engine.key_capture = keys,
+        Op::SetInputCapture { enabled } => engine.input_capture = enabled,
         Op::SetPointerShape { shape } => {
             let _ = engine.term.set_pointer_shape(&shape);
         }

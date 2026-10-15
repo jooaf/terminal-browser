@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Box, Text } from "@zenbu-labs/pixel";
 import { Backdrop } from "../modals";
 import { Icon } from "../icons";
+import { HintBox, HintLayer } from "../hints";
 import type { IconName } from "../icons";
 import type { Theme } from "../theme";
 import type { ChromeLayout, SettingsActions, SettingsSection, SettingsView } from "../types";
@@ -63,7 +64,7 @@ export function SettingsCard({
     setMenu(null);
   };
   return (
-    <>
+    <HintLayer scope="settings" onDismiss={actions.close}>
       <Backdrop layout={layout} onClose={actions.close} />
       <Box
         style={{
@@ -92,7 +93,7 @@ export function SettingsCard({
             {SECTIONS.map((section) => {
               const active = section === view.section;
               return (
-                <Box
+                <HintBox hintId={`settings.section.${section}`}
                   key={section}
                   style={{
                     height: rem * 2.2,
@@ -116,7 +117,7 @@ export function SettingsCard({
                   >
                     {copy.sections[section]}
                   </Text>
-                </Box>
+                </HintBox>
               );
             })}
           </Box>
@@ -166,9 +167,10 @@ export function SettingsCard({
           layout={layout}
           theme={theme}
           onCancel={actions.cancelRecording}
+          onSave={actions.saveRecording}
         />
       )}
-    </>
+    </HintLayer>
   );
 }
 
@@ -193,7 +195,7 @@ function PaneHeader({
       }}
     >
       <Text style={{ flexGrow: 1, flexBasis: 0, fontSize: rem * 1.2, wrap: false, selectable: false }}>{title}</Text>
-      <IconButton icon="close" rem={rem} theme={theme} onClick={onClose} />
+      <IconButton hintId="settings.close" icon="close" rem={rem} theme={theme} onClick={onClose} />
     </Box>
   );
 }

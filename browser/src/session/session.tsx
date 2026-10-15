@@ -43,6 +43,8 @@ import type {
 } from "shared";
 import { bundledAsset } from "../assets";
 import { CopyOnSelect, Grab, reactGrabPreloadPath } from "../grab/grab";
+import { Hints } from "../hints/hints";
+import { ChromeHints } from "../hints/chrome";
 import type { GrabRegion } from "../grab/grab";
 import { grabScreenshot } from "../grab/screenshot";
 import { AgentPaneFinder } from "../grab/target";
@@ -258,6 +260,9 @@ class Session {
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private records = new Map<number, RecordSession>();
   private grabs = new Map<number, Grab>();
+  private hints: Hints | null = null;
+  private readonly chromeHints = new ChromeHints();
+  private hintKeys = new Set<string>();
   private copyWatchers = new Map<number, CopyOnSelect>();
   private readonly copyOnSelect: boolean;
   private readonly inspectIcon = bundledAsset(path.join("chromium", "logo.png"));
@@ -295,6 +300,7 @@ class Session {
     this.tabs = new TabManager(
       {
         onActivated: () => {
+          this.hints?.cancel();
           this.pageMenu = null;
           this.reconcileRecord();
           this.recalculateLayout();
@@ -350,12 +356,14 @@ class Session {
       cwd: this.ctx.cwd,
       onKey: (event) => this.handleKey(event),
       onResize: () => {
+        this.hints?.cancel();
         // really?
         this.recalculateLayout();
         this.render();
       },
       onColors: () => this.render(),
       onFocus: (focused) => {
+        if (!focused) this.hints?.cancel();
         if (focused) this.telemetry.used();
       },
       onVisible: (visible) => {
@@ -446,6 +454,7 @@ class Session {
   shutdown(code = 0) {
     if (this.shuttingDown) return;
     this.shuttingDown = true;
+    this.hints?.cancel();
     for (const record of this.records.values()) record.dispose();
     this.records.clear();
     this.shownRecord = null;
@@ -507,6 +516,7 @@ class Session {
     contextMenu: (id, params) => this.tabs.contextMenu(id, params),
     download: (progress) => this.showDownload(progress),
     pointer: (id, event) => {
+      if (event.kind === "down") this.hints?.cancel();
       if (id === this.tabs.active?.id) this.activeRecord()?.pointerSample(event);
     },
   };
@@ -553,6 +563,7 @@ class Session {
         devtools={this.devtoolsView()}
         profiling={this.profiling}
         grabActive={this.activeGrab()?.active ?? false}
+        hints={this.chromeHints}
       />,
     );
   }
@@ -705,6 +716,7 @@ class Session {
   }
 
   private async startRecording() {
+    this.hints?.cancel();
     if (this.recordStarting) return;
     const tab = this.tabs.active;
     if (!tab || !tab.ref.current || !this.root || this.records.has(tab.id)) return;
@@ -760,7 +772,32 @@ class Session {
 
   private handleKey(event: EngineKeyEvent): boolean {
     const handle = this.tabs.activeHandle;
-    if (event.kind === "release") return false;
+    if (event.kind === "release") return this.hintKeys.delete(event.key) || this.hints !== null;
+    if (event.kind === "repeat" && this.hintKeys.has(event.key)) return true;
+    if (event.kind === "press") this.hintKeys.delete(event.key);
+    const command = this.keymap.match(event);
+    if (command === "hints.show" && event.kind === "repeat") return true;
+    if (this.hints) {
+      if (this.hints.accepts(event)) {
+        this.hintKeys.add(event.key);
+        this.hints.handleKey(event);
+        return true;
+      }
+      if (command === "hints.show") {
+        this.startHints();
+        return true;
+      }
+      if (command) this.hints.cancel();
+      else {
+        this.hintKeys.add(event.key);
+        this.hints.handleKey(event);
+        return true;
+      }
+    }
+    if (command === "hints.show" && (this.pageMenu || this.settings.isOpen)) {
+      this.startHints();
+      return true;
+    }
     if (this.settings.recording) {
       this.settings.recordKey(event);
       return true;
@@ -770,7 +807,6 @@ class Session {
       this.requestDevReload(devSocket);
       return true;
     }
-    const command = this.keymap.match(event);
     if (command === "quit") {
       this.shutdown();
       return true;
@@ -784,7 +820,8 @@ class Session {
       if (event.key === "escape") return true;
     }
     if (this.settings.isOpen) {
-      if (event.key === "escape" || command === "settings.open") this.settings.close();
+      if (event.key === "escape") this.chromeHints.dismissTop();
+      else if (command === "settings.open") this.settings.close();
       return true;
     }
     if (this.palette) {
@@ -895,6 +932,9 @@ class Session {
       }
       case "grab.toggle":
         void this.toggleGrab();
+        return;
+      case "hints.show":
+        this.startHints();
         return;
       case "zoom.in":
         this.applyZoom(1);
@@ -1035,6 +1075,7 @@ class Session {
   }
 
   private blurToOverlay() {
+    this.hints?.cancel();
     this.tabs.activeHandle?.blur();
   }
 
@@ -1057,6 +1098,7 @@ class Session {
   }
 
   private openDevtools(panel: string | null = null) {
+    this.hints?.cancel();
     const tab = this.tabs.active;
     if (!tab || !this.root) return;
     tab.devtools = true;
@@ -1105,6 +1147,7 @@ class Session {
   }
 
   private openPageMenu(params: Electron.ContextMenuParams) {
+    this.hints?.cancel();
     if (!this.surfaceLayout) return;
     if (this.palette || this.newTab || this.urlEditOpen || this.settings.isOpen) return;
     const scale = this.surfaceLayout.scale;
@@ -1122,11 +1165,13 @@ class Session {
 
   private closePageMenu() {
     if (!this.pageMenu) return;
+    this.hints?.cancel();
     this.pageMenu = null;
     this.render();
   }
 
   private toggleToolbarMenu() {
+    this.hints?.cancel();
     if (this.pageMenu?.kind === "toolbar") {
       this.closePageMenu();
       return;
@@ -1183,6 +1228,34 @@ class Session {
     }
   }
 
+  private startHints() {
+    const handle = this.tabs.activeHandle;
+    if (!handle || !this.layout || this.activeRecord() || this.activeGrab()?.active) return;
+    this.hints?.cancel();
+    if (!this.settings.isOpen) this.closeFind();
+    const click = this.keymap.binding("hints.click");
+    this.enterOverlay([]);
+    this.root?.setInputCapture(true);
+    const hints = new Hints(handle, {
+      closed: () => {
+        if (this.hints !== hints) return;
+        this.hints = null;
+        this.root?.setInputCapture(false);
+        if (!this.shuttingDown && !this.settings.isOpen) this.leaveOverlay();
+      },
+      notify: (text) => this.showToast(text, "alert"),
+    }, {
+      alphabet: this.settings.get("hints.alphabet"),
+      clickChords: click.chords,
+      clickLabel: this.keymap.label("hints.click"),
+      chrome: this.chromeHints,
+      scope: this.chromeHints.scope,
+      viewport: { x: 0, y: 0, width: this.layout.width, height: this.layout.height },
+    });
+    this.hints = hints;
+    hints.start();
+  }
+
   private activeGrab(): Grab | null {
     const tab = this.tabs.active;
     return tab ? this.grabs.get(tab.id) ?? null : null;
@@ -1216,6 +1289,7 @@ class Session {
   }
 
   private async toggleGrab() {
+    this.hints?.cancel();
     const tab = this.tabs.active;
     const handle = tab?.ref.current;
     if (!tab || !handle) return;
@@ -1456,6 +1530,7 @@ class Session {
       run: () => this.runCommand(id),
     });
     return [
+      command("hints.show"),
       command("find"),
       command("record.toggle"),
       command("grab.toggle"),

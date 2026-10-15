@@ -66,6 +66,7 @@ export interface WebViewProps {
 
 export interface WebViewHandle {
   readonly webContents: Electron.WebContents;
+  readonly popupOpen: boolean;
   readonly state: WebViewState;
   onChange(listener: (state: WebViewState) => void): () => void;
   loadURL(url: string): void;
@@ -465,6 +466,9 @@ export const WebView = forwardRef<WebViewHandle, WebViewProps>(function WebView(
       const handle: WebViewHandle = {
         get webContents() {
           return host().webContents;
+        },
+        get popupOpen() {
+          return host().popup !== null;
         },
         get state() {
           return stateRef.current;
