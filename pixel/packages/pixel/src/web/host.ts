@@ -14,7 +14,7 @@ import { PopupWindow } from "./popup";
 import { prepareSession } from "./session";
 import { cssSize, initialWebViewState } from "./types";
 import type { DevtoolsDock, SurfaceLayout, WebViewState } from "./types";
-import { scaleZoom, stepZoom } from "./zoom";
+import { PageZoom } from "./zoom";
 import type { ZoomDirection } from "./zoom";
 
 export const QUIT_URL = "pixel://quit";
@@ -72,6 +72,7 @@ function windowOptions(
 export interface HostOptions {
   url: string;
   background: string;
+  baseZoom: number;
   clipboardRead: boolean;
   proxy: string | null;
   browserWindowOptions: BrowserWindowOptions;
@@ -81,6 +82,7 @@ export class PageHost {
   readonly surface: Surface;
   private readonly popupSurface: Surface;
   private readonly window: BrowserWindow;
+  private readonly pageZoom: PageZoom;
   private readonly browserWindowOptions: BrowserWindowOptions;
   private readonly onState: (state: WebViewState) => void;
   private renderScale: number;
@@ -145,6 +147,11 @@ export class PageHost {
     const size = this.contentSize(layout);
     this.window = new BrowserWindow(
       windowOptions(this.browserWindowOptions, size, offscreenPreferences(this.renderScale)),
+    );
+    this.pageZoom = new PageZoom(
+      this.window.webContents,
+      options.baseZoom,
+      this.browserWindowOptions.webPreferences?.zoomFactor ?? 1,
     );
     prepareSession(this.window.webContents.session);
     if (options.proxy) void routeThroughProxy(this.window.webContents.session, options.proxy);
@@ -288,15 +295,15 @@ export class PageHost {
   }
 
   zoom(direction: ZoomDirection): number {
-    const factor = stepZoom(this.window.webContents, direction);
+    const factor = this.pageZoom.step(direction);
     this.updateState({ zoom: factor });
     return factor;
   }
 
-  scaleZoom(ratio: number): number {
-    const factor = scaleZoom(this.window.webContents, ratio);
-    this.updateState({ zoom: factor });
-    return factor;
+  setBaseZoom(base: number): void {
+    this.pageZoom.setBaseZoom(base);
+    for (const popup of this.popups) popup.setBaseZoom(base);
+    this.updateState({ zoom: this.pageZoom.factor });
   }
 
   async attachCdp(): Promise<void> {
@@ -308,22 +315,10 @@ export class PageHost {
     });
     await this.cdp("Runtime.enable");
     await this.cdp("Page.enable");
-    await this.emulateColorScheme();
   }
 
-  async setBackground(background: string): Promise<void> {
+  setBackground(background: string): void {
     this.background = background;
-    await this.emulateColorScheme();
-  }
-
-  private async emulateColorScheme(): Promise<void> {
-    if (!this.cdpAttached) return;
-    const n = parseInt(this.background.slice(1), 16);
-    const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-    const dark = 0.2126 * r + 0.7152 * g + 0.0722 * b < 128;
-    await this.cdp("Emulation.setEmulatedMedia", {
-      features: [{ name: "prefers-color-scheme", value: dark ? "dark" : "light" }],
-    });
   }
 
   cdp(method: string, params?: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -528,6 +523,7 @@ export class PageHost {
   }
 
   private async loadFavicon(urls: string[]) {
+    if (this.stopped) return;
     const seq = ++this.faviconSeq;
     const file = await this.favicons.resolve(urls, this.window.webContents.session).catch(() => null);
     if (file && seq === this.faviconSeq && !this.stopped) this.updateState({ favicon: file });
@@ -539,7 +535,7 @@ export class PageHost {
       loading,
       canGoBack: this.window.webContents.navigationHistory.canGoBack(),
       canGoForward: this.window.webContents.navigationHistory.canGoForward(),
-      zoom: this.window.webContents.getZoomFactor(),
+      zoom: this.pageZoom.factor,
     });
   }
 
@@ -591,6 +587,7 @@ export class PageHost {
       size,
       this.renderScale,
       () => this.layout.scale,
+      this.pageZoom.state,
       () => this.onPopupChange?.(),
       () => {
         const at = this.popups.indexOf(popup);

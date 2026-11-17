@@ -161,6 +161,13 @@ module.exports = async function checkChrome(contents) {
       keyEvents, pastes, send: (message) => worker.postMessage(message),
       setKeyHandler: (handler) => { keyHandler = handler; },
     });
+    await require("./find-focus.electron.cjs")({
+      root, registry, theme, render, until, settle, key,
+      send: (message) => worker.postMessage(message),
+      setKeyHandler: (handler) => { keyHandler = handler; },
+    });
+    await require("./system-theme.electron.cjs")({ root });
+    await require("./terminal-zoom.electron.cjs")({ root });
     console.log("Native chrome and Settings hint checks passed");
   } finally {
     root?.stop();

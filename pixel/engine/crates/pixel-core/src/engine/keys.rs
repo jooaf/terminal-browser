@@ -69,9 +69,11 @@ fn is_plain_enter(key: &KeyEvent) -> bool {
 
 fn capture_matches(name: &str, key: &KeyEvent) -> bool {
     use crate::terminal::Key;
-    if key.mods.shift || key.mods.alt || key.mods.ctrl || key.mods.sup {
+    let shifted = name.strip_prefix("shift+");
+    if key.mods.shift != shifted.is_some() || key.mods.alt || key.mods.ctrl || key.mods.sup {
         return false;
     }
+    let name = shifted.unwrap_or(name);
     match key.key {
         Key::Char(c) => name.chars().eq(std::iter::once(c)),
         Key::Up => name == "up",
@@ -102,7 +104,11 @@ fn capture_matches(name: &str, key: &KeyEvent) -> bool {
 }
 
 impl Engine {
-    pub(super) fn handle_key(&mut self, key: KeyEvent, out: &mut Vec<EngineEvent>) -> io::Result<()> {
+    pub(super) fn handle_key(
+        &mut self,
+        key: KeyEvent,
+        out: &mut Vec<EngineEvent>,
+    ) -> io::Result<()> {
         crate::profiler::mark("key", self.active_view as u32, || key_label(&key));
         if self.input_capture || self.key_passthrough {
             out.push(EngineEvent::Key {
@@ -128,7 +134,11 @@ impl Engine {
                 return Ok(());
             }
         }
-        if self.key_capture.iter().any(|name| capture_matches(name, &key)) {
+        if self
+            .key_capture
+            .iter()
+            .any(|name| capture_matches(name, &key))
+        {
             out.push(EngineEvent::Key {
                 view: self.active_view,
                 event: key,
@@ -188,5 +198,49 @@ impl Engine {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::capture_matches;
+    use crate::terminal::{Key, KeyEvent, KeyKind, Mods};
+
+    #[test]
+    fn key_capture_requires_exact_modifiers() {
+        for shift in [false, true] {
+            let mut key = KeyEvent {
+                key: Key::Enter,
+                mods: Mods {
+                    shift,
+                    ..Mods::default()
+                },
+                kind: KeyKind::Press,
+                text: None,
+            };
+            assert_eq!(capture_matches("enter", &key), !shift);
+            assert_eq!(capture_matches("shift+enter", &key), shift);
+            for mods in [
+                Mods {
+                    shift,
+                    ctrl: true,
+                    ..Mods::default()
+                },
+                Mods {
+                    shift,
+                    alt: true,
+                    ..Mods::default()
+                },
+                Mods {
+                    shift,
+                    sup: true,
+                    ..Mods::default()
+                },
+            ] {
+                key.mods = mods;
+                assert!(!capture_matches("enter", &key));
+                assert!(!capture_matches("shift+enter", &key));
+            }
+        }
     }
 }

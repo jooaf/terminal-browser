@@ -44,6 +44,7 @@ export function Chrome({
   colors,
   font,
   findOpen,
+  findFocusRequest,
   palette,
   tabs,
   newTab,
@@ -70,6 +71,7 @@ export function Chrome({
   colors: EngineInfo["colors"];
   font: number;
   findOpen: boolean;
+  findFocusRequest: number;
   palette: PaletteView | null;
   tabs: TabRow[];
   newTab: NewTabView | null;
@@ -157,7 +159,7 @@ export function Chrome({
         <PageContextMenu view={pageMenu} actions={actions} layout={layout} theme={theme} />
       )}
       {findOpen && (
-        <FindBar state={state} actions={actions} layout={layout} theme={theme} />
+        <FindBar focusRequest={findFocusRequest} state={state} actions={actions} layout={layout} theme={theme} />
       )}
       {zoomHud != null && (
         <ZoomHud factor={zoomHud} layout={layout} theme={theme} findOpen={findOpen} />

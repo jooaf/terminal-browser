@@ -324,11 +324,12 @@ const electron = process.env.ELECTRON_PATH ?? (process.platform === "darwin"
   ? path.join(electronRoot, "Electron.app/Contents/MacOS/pixel")
   : path.join(electronRoot, "electron"));
 
-test("keyboard hints in real Chromium", { skip: !fs.existsSync(electron), timeout: 60000 }, async () => {
+test("browser integration in real Chromium", { skip: !fs.existsSync(electron), timeout: 60000 }, async () => {
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
   const { stdout, stderr } = await promisify(execFile)(electron, [path.join(__dirname, "hints.electron.cjs")], {
     env, timeout: 55000,
   });
   assert.match(stdout, /Keyboard hint browser checks passed/, stderr);
+  assert.match(stdout, /User-agent HTTP, navigator, client hints and popup checks passed/, stderr);
 });

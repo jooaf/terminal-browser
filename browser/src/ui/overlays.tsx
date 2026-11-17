@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Box, Input, Text } from "@zenbu-labs/pixel";
-import type { WebViewState } from "@zenbu-labs/pixel";
+import type { NodeHandle, WebViewState } from "@zenbu-labs/pixel";
 import { Icon } from "./icons";
 import type { IconName } from "./icons";
 import { mix, type Theme } from "./theme";
 import type { ChromeActions, ChromeLayout, DownloadView, ToastView } from "./types";
 
 export function FindBar({
+  focusRequest,
   state,
   actions,
   layout,
   theme,
 }: {
+  focusRequest: number;
   state: WebViewState;
   actions: ChromeActions;
   layout: ChromeLayout;
@@ -19,6 +21,11 @@ export function FindBar({
 }) {
   const rem = layout.rem;
   const [text, setText] = useState("");
+  const input = useRef<NodeHandle>(null);
+  useLayoutEffect(() => {
+    input.current?.focus();
+    input.current?.selectAll();
+  }, [focusRequest]);
   const matches = state.findMatches;
   const count = matches ? `${matches.total ? matches.active : 0}/${matches.total}` : "";
   const change = (value: string) => {
@@ -41,8 +48,8 @@ export function FindBar({
       }}
     >
       <Input
+        ref={input}
         value={text}
-        autoFocus
         style={{ flexGrow: 1, flexBasis: 0, wrap: false, fontSize: rem * 0.9 }}
         caretColor={theme.accent}
         selectionColor={theme.selection}

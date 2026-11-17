@@ -105,9 +105,10 @@ export const HintBox = forwardRef<NodeHandle, HintBoxProps>(function HintBox({
       {enabled && state.active && !state.hovering && label?.startsWith(state.prefix) && (
         <Box style={{
           position: "absolute", inset: { top: 0, [hintAlign === "end" ? "right" : "left"]: 0 },
-          padding: { left: 2, right: 2 }, background: "#ffe16b", cornerRadius: 2,
+          height: 22, alignItems: "center", padding: { left: 4, right: 4 },
+          background: "#ffe16b", border: { width: 1, color: "#171717" }, cornerRadius: 3,
         }}>
-          <Text style={{ fontSize: 12, color: "#171717", wrap: false, selectable: false }}>{label.toUpperCase()}</Text>
+          <Text style={{ fontSize: 14, color: "#171717", wrap: false, selectable: false }}>{label.toUpperCase()}</Text>
         </Box>
       )}
     </Box>

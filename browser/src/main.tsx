@@ -2,7 +2,7 @@ import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 
-import { app, screen } from "electron";
+import { app, nativeTheme, screen } from "electron";
 
 import { runDaemon } from "./daemon";
 import { ConfigStore, LOGS_DIR, SETTINGS_FILE, SHORTCUTS_FILE, ensureDataDir, installedVersion } from "shared";
@@ -11,6 +11,7 @@ import type { CrashSource } from "./telemetry";
 import { appLog } from "@zenbu-labs/pixel";
 import { claimProfile } from "./profile";
 import { registerScheme } from "./pages/scheme";
+import { browserUserAgent } from "./user-agent";
 app.commandLine.appendSwitch("disable-renderer-backgrounding");
 app.commandLine.appendSwitch("disable-background-timer-throttling");
 app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
@@ -72,6 +73,8 @@ void (async () => {
   const cdpPort = await freePort().catch(() => null);
   if (cdpPort != null) app.commandLine.appendSwitch("remote-debugging-port", String(cdpPort));
   await app.whenReady();
+  nativeTheme.themeSource = "system";
+  app.userAgentFallback = browserUserAgent(app.userAgentFallback);
   appLog(
     "info",
     "scale",

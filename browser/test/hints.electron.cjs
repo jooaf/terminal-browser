@@ -15,6 +15,7 @@ async function run() {
     webPreferences: { offscreen: true, sandbox: true, contextIsolation: true, backgroundThrottling: false },
   });
   const contents = window.webContents;
+  await require("./user-agent.electron.cjs")();
   contents.debugger.attach("1.3");
   const cdp = (method, params) => contents.debugger.sendCommand(method, params);
   const js = (source) => contents.executeJavaScript(source);

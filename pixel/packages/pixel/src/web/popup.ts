@@ -3,7 +3,7 @@ import type { BrowserWindow } from "electron";
 import type { Surface } from "../react";
 import { cursorShapeFor } from "./cursor";
 import { PageInput } from "./input";
-import { scaleZoom, stepZoom } from "./zoom";
+import { PageZoom } from "./zoom";
 import type { ZoomDirection } from "./zoom";
 
 export interface PopupState {
@@ -19,6 +19,7 @@ export class PopupWindow {
   cursorShape = "default";
   onCursorChange: (() => void) | null = null;
   private readonly window: BrowserWindow;
+  private readonly pageZoom: PageZoom;
   private readonly surface: Surface;
   private readonly onChange: () => void;
   private readonly renderScale: number;
@@ -34,6 +35,7 @@ export class PopupWindow {
     size: { width: number; height: number },
     renderScale: number,
     scale: () => number,
+    zoom: { base: number; factor: number },
     onChange: () => void,
     onClosed: () => void,
     openWindow?: (details: Electron.HandlerDetails) => Electron.WindowOpenHandlerResponse,
@@ -56,6 +58,7 @@ export class PopupWindow {
       cdp: (method, params) => this.cdp(method, params),
     });
     const contents = window.webContents;
+    this.pageZoom = new PageZoom(contents, zoom.base, zoom.factor);
     contents.on("page-title-updated", (_event, title) => this.update({ title }));
     contents.on("did-navigate", (_event, url) => this.update({ url }));
     contents.on("did-navigate-in-page", (_event, url, mainFrame) => {
@@ -94,11 +97,11 @@ export class PopupWindow {
   }
 
   zoom(direction: ZoomDirection): number {
-    return stepZoom(this.window.webContents, direction);
+    return this.pageZoom.step(direction);
   }
 
-  scaleZoom(ratio: number): number {
-    return scaleZoom(this.window.webContents, ratio);
+  setBaseZoom(base: number): void {
+    this.pageZoom.setBaseZoom(base);
   }
 
   setVisible(visible: boolean) {

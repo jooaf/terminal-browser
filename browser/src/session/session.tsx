@@ -81,6 +81,7 @@ import { clampDevtoolsFraction, computeLayout, dividerFraction, recordBarHeight 
 
 // Installed builds run from a dist root; anything else is a source checkout.
 const DEV_BUILD = !process.env.TERMINAL_BROWSER_DIST_ROOT;
+const FIND_CAPTURE_KEYS = ["enter", "shift+enter"];
 import type { DevtoolsPlacement, SurfaceLayout } from "./layout";
 import { SettingsManager } from "./settings";
 import { Telemetry } from "../telemetry";
@@ -248,6 +249,7 @@ class Session {
     | null = null;
 
   private findOpen = false;
+  private findFocusRequest = 0;
   private urlEditOpen = false;
   private palette: { query: string; index: number } | null = null;
   private newTab: NewTabState | null = null;
@@ -531,6 +533,7 @@ class Session {
         colors={this.root.info.colors}
         font={this.fontId}
         findOpen={this.findOpen}
+        findFocusRequest={this.findFocusRequest}
         tabs={this.tabs.view()}
         newTab={
           this.newTab
@@ -658,7 +661,7 @@ class Session {
   }
 
   private leaveOverlay() {
-    this.root?.setKeyCapture(this.findOpen ? ["enter"] : []);
+    this.root?.setKeyCapture(this.findOpen ? FIND_CAPTURE_KEYS : []);
     this.refocusPage();
   }
 
@@ -1446,7 +1449,7 @@ class Session {
     if (!this.newTab) return;
     if (this.newTab.timer) clearTimeout(this.newTab.timer);
     this.newTab = null;
-    this.root?.setKeyCapture(this.findOpen ? ["enter"] : []);
+    this.root?.setKeyCapture(this.findOpen ? FIND_CAPTURE_KEYS : []);
     this.refocusPage();
     this.render();
   }
@@ -1484,10 +1487,10 @@ class Session {
   }
 
   private openFind() {
-    if (this.findOpen) return;
     this.findOpen = true;
+    this.findFocusRequest++;
     this.blurToOverlay();
-    this.root?.setKeyCapture(["enter"]);
+    this.root?.setKeyCapture(FIND_CAPTURE_KEYS);
     this.render();
   }
 

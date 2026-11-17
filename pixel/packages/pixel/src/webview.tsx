@@ -246,6 +246,7 @@ export const WebView = forwardRef<WebViewHandle, WebViewProps>(function WebView(
       {
         url: initial.src,
         background: registry.background(),
+        baseZoom: registry.baseZoom,
         clipboardRead: !!initial.clipboardRead,
         proxy: initial.proxy ?? null,
         browserWindowOptions,

@@ -6,6 +6,7 @@ import type { Store } from "./react/devtools/store";
 import type { PageHost } from "./web/host";
 import type { PageInput } from "./web/input";
 import type { TerminalTheme } from "./web/session";
+import { terminalZoom } from "./terminal-zoom";
 
 export interface ViewEntry {
   host: PageHost | null;
@@ -37,6 +38,7 @@ export class ViewRegistry {
     at: 0,
   });
   readonly colors: Store<TerminalColors>;
+  baseZoom: number;
   private sentCursor: string | null = null;
 
   constructor(
@@ -46,6 +48,14 @@ export class ViewRegistry {
     private readonly hooks: RegistryHooks,
   ) {
     this.colors = createStore<TerminalColors>(root.info.colors);
+    this.baseZoom = terminalZoom(root.info, displayScale) ?? 1;
+  }
+
+  syncZoom() {
+    const base = terminalZoom(this.root.info, this.displayScale);
+    if (base === null || base === this.baseZoom) return;
+    this.baseZoom = base;
+    for (const host of this.hosts()) host.setBaseZoom(base);
   }
 
   register(entry: ViewEntry) {

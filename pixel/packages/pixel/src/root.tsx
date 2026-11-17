@@ -28,7 +28,7 @@ import { RootContext, ViewRegistry } from "./registry";
 import type { ViewEntry } from "./registry";
 import { WebView } from "./webview";
 import type { WebViewHandle, WebViewProps } from "./webview";
-import { CellZoomFollower, hostDisplayScale } from "./scale";
+import { hostDisplayScale } from "./scale";
 import { detect } from "./terminal";
 import { initOffscreenMode } from "./web/offscreen";
 import {
@@ -117,7 +117,6 @@ export function createRoot(options: RootOptions = {}): Root {
   const embed = env.PIXEL_EMBED ?? null;
   let owner: Instance | null = tty && !embed ? findOwner(tty) : null;
   const name = options.name ?? app.getName();
-  const cellZoom = new CellZoomFollower();
   const shell = new Shell(() => name);
   let registry: ViewRegistry | null = null;
   let inputCaptured = false;
@@ -202,19 +201,17 @@ export function createRoot(options: RootOptions = {}): Root {
       if (!inputCaptured) registry?.handlePasteImage(image);
     },
     onFocus: (focused) => {
+      if (focused) engineRoot.nudgeResize();
       options.onFocus?.(focused);
       registry?.handleTerminalFocus(focused);
     },
-    onVisible: (visible) => options.onVisible?.(visible),
+    onVisible: (visible) => {
+      if (visible) engineRoot.nudgeResize();
+      options.onVisible?.(visible);
+    },
     onResize: (size) => {
-      const ratio = cellZoom.ratio(engineRoot.info);
       if (registry) {
-        if (ratio != null) {
-          for (const host of registry.hosts()) {
-            host.scaleZoom(ratio);
-            host.popup?.scaleZoom(ratio);
-          }
-        }
+        registry.syncZoom();
         for (const listener of registry.resizeListeners) listener();
       }
       options.onResize?.(size);
@@ -224,7 +221,7 @@ export function createRoot(options: RootOptions = {}): Root {
       if (registry) {
         registry.colors.set(colors);
         const background = registry.background();
-        for (const host of registry.hosts()) void host.setBackground(background);
+        for (const host of registry.hosts()) host.setBackground(background);
         if (embedder) broadcastTheme(embedder, registry.theme());
       }
       options.onColors?.(colors);
@@ -240,7 +237,6 @@ export function createRoot(options: RootOptions = {}): Root {
     },
   });
   initOffscreenMode(engineRoot.sharedTextures);
-  cellZoom.ratio(engineRoot.info);
 
   const quit = (entry: ViewEntry | null) => {
     if (options.onQuit) options.onQuit((entry?.handle as WebViewHandle | null) ?? null);
